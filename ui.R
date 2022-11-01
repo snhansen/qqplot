@@ -3,13 +3,13 @@ library(shinythemes)
 library(shinyFeedback)
 
 ui <- fluidPage(
-  title = "Quantile-quantile plots for normally distributed data", theme = shinytheme("lumen"),
-  titlePanel(
-    h1("Quantile-quantile plots for normally distributed data", align = "center")
-  ),
+  title = "Quantile-quantile plots for normally distributed data",
+  theme = shinytheme("lumen"),
+  titlePanel(h1("Quantile-quantile plots for normally distributed data",
+                align = "center")),
   div(style = "margin-top: 30px"),
   fluidRow(
-    plotOutput("scatterPlot", height = "800px"),
+    plotOutput("main_plot", height = "800px"),
     shinyFeedback::useShinyFeedback()
   ),
   
@@ -23,13 +23,11 @@ ui <- fluidPage(
                         min = 1,
                         max = 100000,
                         width = "80%"),
-           div(style="padding: 26px 0px 0px 0px;", 
+           div(style="padding: 26px 0px 0px 0px;",
               actionButton("generate",
                            label = "Generate plot(s)",
-                           width = "80%")
-           ),
-           offset = 4
-    ),
+                           width = "80%")),
+           offset = 4),
     column(2,
            h2("Preferences"),
            numericInput("n_rows",

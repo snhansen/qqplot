@@ -4,73 +4,71 @@ library(ggplot2)
 library(cowplot)
 library(shinyFeedback)
 
-
 server <- function(input, output) {
   data_generated <- reactiveVal(FALSE)
-  max_obs <<- 500000
-  valid_obs <- reactive({
-    input$n*input$n_rows*input$n_cols <= max_obs
+  max_obs <- 500000
+  
+  valid <- reactive({
+    input$n >= 1 & (input$n %% 1) == 0 & input$n*input$n_rows*input$n_cols <= max_obs & input$n_cols >= 1 & 
+      (input$n_cols %% 1) == 0 & input$n_rows >= 1 & (input$n_rows %% 1) == 0
   })
   
-  valid_cols <- reactive({
-    (input$n_cols>=1) & (input$n_cols%%1 == 0)
-  })
-  
-  valid_rows <- reactive({
-    (input$n_rows>=1) & (input$n_rows%%1 == 0)
-  })
-  
-  
+  # Throw warnings if inputs aren't valid. 
   observe({
-    shinyFeedback::feedbackWarning("n", !valid_obs(), "You have exceeded the maximum number of observations. Try fewer observations or fewer plots.")
-    shinyFeedback::feedbackWarning("n_cols", !valid_cols(), "Number of columns must be an integer >= 1.")
-    shinyFeedback::feedbackWarning("n_rows", !valid_rows(), "Number of rows must be an integer >= 1.")
+    feedbackWarning("n_cols", input$n_cols < 1 | (input$n_cols %% 1) != 0, "Number of columns must be an integer >= 1.")
+    feedbackWarning("n_rows", input$n_rows < 1 | (input$n_rows %% 1) != 0, "Number of rows must be an integer >= 1.")
+    
+    # For the number of observations there are two cases that we wish to
+    # treat separately. This is done with the following trick.
+    hideFeedback("n")
+    case1 <- input$n*input$n_rows*input$n_cols > max_obs
+    case2 <- (input$n < 1) | ((input$n %% 1) != 0)
+    feedback_text <- ""
+    if (case1) {
+      feedback_text <- paste0("You have exceeded the maximum number of observations. Try fewer observations or fewer plots.")
+    }
+    else if (case2) {
+      feedback_text <- paste0("Number of observations needs to be an integer >= 1.")
+    }
+    feedbackWarning("n", case1 | case2, feedback_text)
   })
   
+  # Simulate data from a standard normal distribution upon 
+  # pressing the generate button if inputs are valid.
   dat <- eventReactive(input$generate, {
-    if (valid_obs() & valid_rows() & valid_cols()) {
-      y <- rnorm(round(input$n)*input$n_rows*input$n_cols, 0, 1)
+    if (valid()) {
+      y <- rnorm(input$n*input$n_rows*input$n_cols, 0, 1)
       data.frame(y)
     }
     else {
-      data.frame()
+      NULL
     }
   })
   
-  observeEvent(input$generate, {
-    data_generated(TRUE)
-  })
-  
-  observeEvent(input$n_cols, {
-    data_generated(FALSE)
-  })
-  
-  observeEvent(input$n_rows, {
-    data_generated(FALSE)
-  })
-  
-  observeEvent(input$n, {
-    data_generated(FALSE)
-  })
-  
-  
-  plot <- reactive({
-    if (data_generated() & valid_obs() & valid_rows() & valid_cols()) {
+  # When pressing generate, we also create the plots.
+  plot <- eventReactive(input$generate, {
+    if (!is.null(dat())) {
       plots <- list()
       for (i in 1:(input$n_rows*input$n_cols)) {
         subdat <- as.data.frame(dat()[((i-1)*input$n+1):(i*input$n),])
         colnames(subdat) <- c("y")
-        plots[[i]] <- ggplot(subdat, aes(sample=y)) + theme_minimal() + labs(x="", y="") + 
-          coord_cartesian(xlim=c(-2,2), ylim=c(-2, 2)) +
-          stat_qq() + stat_qq_line() + theme_cowplot()
+        plots[[i]] <- ggplot(subdat, 
+                             aes(sample = y)) + 
+          theme_minimal() +
+          labs(x = "", y = "") +
+          coord_cartesian(xlim = c(-2,2),
+                          ylim = c(-2,2)) +
+          stat_qq() +
+          stat_qq_line() +
+          theme_cowplot()
       }
-      plot_grid_args <- c(plots[seq(1,(input$n_rows*input$n_cols))], list(ncol=input$n_cols))
+      plot_grid_args <- c(plots[seq(1,(input$n_rows*input$n_cols))], list(ncol = input$n_cols))
       do.call(plot_grid, plot_grid_args)
-    } 
+    }
     else {
-      ggplot()
+      NULL
     }
   })
   
-  output$scatterPlot <- renderPlot({plot()})
+  output$main_plot <- renderPlot({plot()})
 }
