@@ -9,8 +9,10 @@ ui <- fluidPage(
                 align = "center")),
   div(style = "margin-top: 30px"),
   fluidRow(
-    plotOutput("main_plot", height = "800px"),
-    shinyFeedback::useShinyFeedback()
+    column(8,
+      plotOutput("main_plot", height = "600px"),
+      shinyFeedback::useShinyFeedback(),
+      offset = 2)
   ),
   
   fluidRow(
@@ -29,7 +31,7 @@ ui <- fluidPage(
                            width = "80%")),
            offset = 4),
     column(2,
-           h2("Preferences"),
+           h2("Settings"),
            numericInput("n_rows",
                         label = "Number of rows in grid:",
                         value = 2,
@@ -38,10 +40,22 @@ ui <- fluidPage(
                         width = "80%"),
            numericInput("n_cols",
                         label = "Number of columns in grid:",
-                        value = 5,
+                        value = 4,
                         step = 1,
                         min = 1,
-                        width = "80%"),
+                        width = "80%")
     ),
+    column(2,
+           h2("Misc"),
+           radioButtons("line_type",
+                        label = "Reference line:",
+                        choices = c("Default" = "default",
+                                    "Alternative" = "alternative"),
+                        inline = TRUE
+           ),
+           downloadButton("dl_plot",
+                          label = "Download plot(s)"
+           )
+    )
   )
 )
